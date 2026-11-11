@@ -22,3 +22,5 @@ class InvalidPublicationDate(Exception):
     """Exception raised for invalid publication dates."""
     pass
 
+class FinnhubNewsScraperError(RuntimeError):
+    """Raised when Finnhub data cannot be retrieved or mapped."""
