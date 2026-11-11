@@ -4,6 +4,8 @@ import sys
 sys.path.append("article_integration/domain")
 from article_integration.domain.news_article import NewsArticle
 from article_integration.domain.exceptions import InvalidLink, EmptyTitle, FuturePublicationDate, EmptyContent, InvalidPublicationDate
+
+
 def test_news_article_validity():
     article = NewsArticle(
         article_id=uuid.uuid4(),
@@ -79,3 +81,24 @@ def test_news_article_invalid_publication_date_type():
         )
 
     assert True
+
+@pytest.mark.parametrize(
+    "title, content, publication_date, link, expected_exception",
+    [
+        ("", "Content", datetime.datetime.now(), "https://example.com", EmptyTitle),
+        ("Title", "", datetime.datetime.now(), "https://example.com", EmptyContent),
+        ("Title", "Content", datetime.datetime.now() + datetime.timedelta(days=1), "https://example.com", FuturePublicationDate),
+        ("Title", "Content", "2023-01-01", "https://example.com", InvalidPublicationDate), 
+        ("Title", "Content", datetime.datetime.now(), "invalid-link", InvalidLink),
+    ]
+)
+def test_news_article_validation(title, content, publication_date, link, expected_exception):
+    with pytest.raises(expected_exception):
+        NewsArticle(
+            article_id=uuid.uuid4(),
+            title=title,
+            content=content,
+            publication_date=publication_date,
+            link=link
+        )
+
