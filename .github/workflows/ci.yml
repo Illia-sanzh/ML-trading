@@ -3,10 +3,13 @@ on:
     pull_request:
         branches: [ main ]
     push:
-        branches: [ main ]
+        branches: [ main, article_integration ]
 jobs:
     test:
         runs-on: ubuntu-latest
+        environment: Actions testing env
+        env:
+            FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
         steps:
             - uses: actions/checkout@v3
             - name: Set up Python
