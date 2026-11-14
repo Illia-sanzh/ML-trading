@@ -9,4 +9,16 @@ The final product will look like this:
 3. The model can place trades(shorts, longs) to make risk-adjusted decisions. Whether this will result in a net profit or loss, is hard to tell. Markets are unpredictable on such a minor scale, especially having little to no resources to work with.
 
 
-Sources used up till now: 
+### Historical S&P 500 membership
+
+The `article_integration.infrastructure.sp500_history` module reconstructs S&P 500
+membership over a historical window, including companies that have since left the
+index. Set `FMP_API_KEY` and run the command from the repository root:
+
+```powershell
+python -m article_integration.infrastructure.sp500_history --years 10 --out sp500_history.json
+```
+
+Project code can import `get_sp500_history` from
+`article_integration.infrastructure.sp500_history`. The JSON output can be used as
+the company universe for historical price-data collection and model training.
