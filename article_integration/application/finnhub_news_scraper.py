@@ -66,7 +66,7 @@ class FinnhubNewsScraper:
         try:
             article_id = item.get("id")
             title = item.get("headline")
-            content = item.get("summary")
+            content = item.get("summary") or title
             publication_date = datetime.datetime.fromtimestamp(item.get("datetime"))
             link = item.get("url")
 
@@ -79,4 +79,3 @@ class FinnhubNewsScraper:
             )
         except Exception as e:
             raise FinnhubNewsScraperError(f"Failed to map Finnhub news item to NewsArticle: {e}")
-

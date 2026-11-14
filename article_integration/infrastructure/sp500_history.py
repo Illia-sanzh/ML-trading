@@ -1,41 +1,3 @@
-#!/usr/bin/env python3
-"""
-Point-in-time S&P 500 membership over the last N years (default 10),
-including companies that have since left the index or been delisted.
-Data comes exclusively from the Financial Modeling Prep (FMP) API.
-
-Why this avoids survivorship bias
----------------------------------
-Taking "today's S&P 500" and looking backwards only sees winners. Here we start
-from the CURRENT constituents and WALK THE INDEX CHANGE LOG BACKWARDS
-(additions / removals with effective dates). That reconstructs who was in the
-index at every date in the window, including firms later acquired, bankrupted
-or demoted.
-
-FMP endpoints used (set FMP_API_KEY; verify paths against FMP's current docs)
------------------------------------------------------------------------------
-* sp500-constituent              current members
-* historical-sp500-constituent   additions/removals with dates and reasons
-* delisted-companies             confirms a ticker actually stopped trading
-
-Usage from another file
------------------------
-    from article_integration.infrastructure.sp500_history import get_sp500_history
-
-    companies = get_sp500_history(years=10, api_key="...", output_path="out.json")
-    for c in companies:
-        print(c.ticker, c.status.value, c.first_active, c.last_active)
-
-Status semantics
-----------------
-ACTIVE   - currently in the index.
-INACTIVE - left the index AND is known to be gone as a listed company
-           (FMP lists it as delisted, or the removal reason says
-           acquired/merged/bankrupt/...).
-UNKNOWN  - left the index but we cannot prove it stopped trading (e.g. demoted
-           to the S&P 400), or the change log is inconsistent (e.g. ticker
-           rename). Never silently guessed.
-"""
 from __future__ import annotations
 
 import argparse
@@ -61,7 +23,6 @@ log = logging.getLogger("sp500_history")
 
 FMP_BASE = "https://financialmodelingprep.com/stable"
 
-# Reasons that imply the ticker stopped trading (not just left the index).
 TERMINAL_REASON_RE = re.compile(
     r"acquir|merge|bankrupt|chapter\s*11|liquidat|delist|"
     r"taken private|going private|buyout|take-private",
@@ -88,18 +49,11 @@ class ChangeEvent:
 
 @dataclass
 class MembershipPeriod:
-    """A continuous stretch of S&P 500 membership.
 
-    start         - date added (or window start if start_clamped).
-    end           - date removed; None means still a member.
-    start_clamped - True when the company was already a member before the
-                    window began, so `start` is just the window boundary.
-    """
     start: Optional[date]
     end: Optional[date]
     start_clamped: bool = False
     end_reason: str = ""
-
     def to_dict(self) -> dict:
         return {
             "start": self.start.isoformat() if self.start else None,
@@ -242,7 +196,7 @@ def build_universe(
     delisted = delisted or {}
     periods: dict[str, list[MembershipPeriod]] = defaultdict(list)
     names: dict[str, str] = {}
-    pending: dict[str, MembershipPeriod] = {}  # periods whose start is not yet known
+    pending: dict[str, MembershipPeriod] = {} 
     orphans: set[str] = set()
 
     for ticker, name in current:
@@ -268,12 +222,12 @@ def build_universe(
             names.setdefault(t, ev.added_name or t)
             if t in pending:
                 pending.pop(t).start = ev.date
-            else:  # added, but never seen leaving or current -> likely ticker change
+            else: 
                 log.warning("%s: added %s but no matching removal/current entry", t, ev.date)
                 periods[t].append(MembershipPeriod(start=ev.date, end=None))
                 orphans.add(t)
 
-    for p in pending.values():  # members since before the window
+    for p in pending.values():  
         p.start = window_start
         p.start_clamped = True
 
@@ -337,25 +291,7 @@ def get_sp500_history(
     session=None,
     provider=None,
 ) -> list[Company]:
-    """Return every company that was in the S&P 500 at any point in the window.
 
-    Args:
-        years: Look-back window in whole years (must be a positive int).
-        api_key: FMP API key. Falls back to the FMP_API_KEY environment variable.
-        today: Window end date; defaults to date.today(). Handy for reproducible runs.
-        output_path: If given, also write the result to this path as JSON.
-        max_delisted_pages: Cap on delisted-companies pages fetched (100 rows/page).
-        session: Optional requests.Session (or compatible) for the FMP calls.
-        provider: Optional custom provider exposing fetch_current(), fetch_changes()
-            and fetch_delisted(since). When given, api_key/session are not needed.
-
-    Returns:
-        list[Company], sorted by ticker.
-
-    Raises:
-        ValueError: invalid `years`, or no API key available.
-        requests.HTTPError: the FMP API returned an error status.
-    """
     if isinstance(years, bool) or not isinstance(years, int) or years < 1:
         raise ValueError(f"years must be a positive integer, got {years!r}")
 
